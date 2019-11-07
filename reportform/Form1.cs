@@ -24,6 +24,10 @@ namespace reportform
         DataTable mTable;
         public static Form1 frm;
         BindingSource myBindingSource = new BindingSource();//创建BindingSource
+        string autoname;
+        string totalname;
+        string address;
+        SqliteConnect con;
         public Form1()
         {
             InitializeComponent();
@@ -32,62 +36,15 @@ namespace reportform
 
         private void button1_Click(object sender, EventArgs e)
         {
-            string a = "我是文件.xls";
-            ExportExcels(a, dataGridView1);
-        }
-
-        /// </summary>
-        /// <param name="fileName">文件路径</param>
-        /// <param name="myDGV">控件DataGridView</param>
-        private void ExportExcels(string fileName, DataGridView myDGV)
-        {
-            string saveFileName = "";
-            SaveFileDialog saveDialog = new SaveFileDialog();
-            saveDialog.DefaultExt = "xls";
-            saveDialog.Filter = "Excel文件|*.xls";
-            saveDialog.FileName = fileName;
-            saveDialog.ShowDialog();
-            saveFileName = saveDialog.FileName;
-            if (saveFileName.IndexOf(":") < 0) return; //被点了取消
-            Microsoft.Office.Interop.Excel.Application xlApp = new Microsoft.Office.Interop.Excel.Application();
-            if (xlApp == null)
+            SaveFileDialog savefile = new SaveFileDialog();
+            //如果文件名未写后缀名则自动添加     *.*不会自动添加后缀名
+            savefile.AddExtension = true;
+            savefile.Filter = "|*.*";
+            savefile.FileName = "斗轮机全自动投用率报表.xlsx";
+            if (DialogResult.OK == savefile.ShowDialog())
             {
-                MessageBox.Show("无法创建Excel对象，可能您的机子未安装Excel");
-                return;
+                Excel.WriteSheet(savefile.FileName, myBindingSource.DataSource as DataTable);
             }
-            Microsoft.Office.Interop.Excel.Workbooks workbooks = xlApp.Workbooks;
-            Microsoft.Office.Interop.Excel.Workbook workbook = workbooks.Add(Microsoft.Office.Interop.Excel.XlWBATemplate.xlWBATWorksheet);
-            Microsoft.Office.Interop.Excel.Worksheet worksheet = (Microsoft.Office.Interop.Excel.Worksheet)workbook.Worksheets[1];//取得sheet1
-                                                                                                                                  //写入标题
-            for (int i = 0; i < myDGV.ColumnCount; i++)
-            {
-                worksheet.Cells[1, i + 1] = myDGV.Columns[i].HeaderText;
-            }
-            //写入数值
-            for (int r = 0; r < myDGV.Rows.Count; r++)
-            {
-                for (int i = 0; i < myDGV.ColumnCount; i++)
-                {
-                    worksheet.Cells[r + 2, i + 1] = myDGV.Rows[r].Cells[i].Value;
-                }
-                System.Windows.Forms.Application.DoEvents();
-            }
-            worksheet.Columns.EntireColumn.AutoFit();//列宽自适应
-            if (saveFileName != "")
-            {
-                try
-                {
-                    workbook.Saved = true;
-                    workbook.SaveCopyAs(saveFileName);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("导出文件时出错,文件可能正被打开！\n" + ex.Message);
-                }
-            }
-            xlApp.Quit();
-            GC.Collect();//强行销毁
-            MessageBox.Show("文件： " + fileName + ".xls 保存成功", "信息提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         public void showTable(string address)
@@ -123,25 +80,11 @@ namespace reportform
 
         public void test()
         {
-            string jsonfile = Application.StartupPath + "\\appsetting.json";
-            string autoname;
-            string totalname;
-            string address;
-            using (System.IO.StreamReader file = System.IO.File.OpenText(jsonfile))
-            {
-                using (JsonTextReader reader = new JsonTextReader(file))
-                {
-                    JObject o = (JObject)JToken.ReadFrom(reader);
-                    autoname = o["inputdata"]["autoName"].ToString();
-                    totalname = o["inputdata"]["totalName"].ToString();
-                    address = o["inputdata"]["address"].ToString();
-                }
-            }
             selectFromIFIX(autoname, totalname);
             showTable(address);
         }
 
-        public void selectFromIFIX(string autoName,string totalName)
+        public void selectFromIFIX(string autoName, string totalName)
         {
             Uri url = UrlBuilder.Build("Intellution.OPCiFIX.1");
             using (var server = new OpcDaServer(url))
@@ -171,16 +114,16 @@ namespace reportform
                         MessageBox.Show($"Error adding items: {result.Error}");
                 }
                 OpcDaItemValue[] values = group.Read(group.Items, OpcDaDataSource.Device);
-                string value1 = JsonConvert.SerializeObject(values[0].Value);
-                string value2 = JsonConvert.SerializeObject(values[1].Value);
-                insertTable(value1, value2);//插入数据库
+                string autoTime = JsonConvert.SerializeObject(values[0].Value);
+                string totalTime = JsonConvert.SerializeObject(values[1].Value);
+                insertTable(autoTime, totalTime);//插入数据库
             }
         }
 
-        public void insertTable(string value1,string value2)
+        public void insertTable(string autoTime, string totalTime)
         {
             ReportInfo report = new ReportInfo();
-            SqliteConnect con = new SqliteConnect();
+
             IEnumerable<ReportInfo> resNew = con.selectNew();
             double? previousAuto;
             double? previousTotal;
@@ -207,17 +150,33 @@ namespace reportform
             {
                 report.dutyName = "夜";
             }
-            report.autoEnd = double.Parse(value1);
-            report.autoTime = double.Parse(value1) - previousAuto;
-            report.totalEnd = double.Parse(value2);
-            report.totalTime = double.Parse(value2) - previousTotal;
-            report.percent = (double.Parse(value1) - previousAuto) / (double.Parse(value2) - previousTotal) * 100;
+            double.TryParse(autoTime, out double autoEnd);
+            double.TryParse(totalTime, out double totalEnd);
+            report.autoEnd = autoEnd;
+            report.autoTime = autoEnd - previousAuto;
+            report.totalEnd = totalEnd;
+            report.totalTime = totalEnd - previousTotal;
+            report.percent = (autoEnd - previousAuto) / (totalEnd - previousTotal) * 100;
+            report.date = DateTime.Now;
             con.insert(report);
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
             CheckForIllegalCrossThreadCalls = false;
+            con = new SqliteConnect();
+            string jsonfile = Application.StartupPath + "\\appsetting.json";
+            using (System.IO.StreamReader file = System.IO.File.OpenText(jsonfile))
+            {
+                using (JsonTextReader reader = new JsonTextReader(file))
+                {
+                    JObject o = (JObject)JToken.ReadFrom(reader);
+                    autoname = o["inputdata"]["autoName"].ToString();
+                    totalname = o["inputdata"]["totalName"].ToString();
+                    address = o["inputdata"]["address"].ToString();
+                }
+            }
+            showTable(address);
             TaskInit.Init();
         }
 
@@ -257,5 +216,30 @@ namespace reportform
             this.Close();
         }
 
+        private void button2_Click(object sender, EventArgs e)
+        {
+            var startTime = dateTimePicker1.Value.ToString("yyyy-MM-dd HH:mm:ss");
+            var endTime = dateTimePicker2.Value.ToString("yyyy-MM-dd HH:mm:ss");
+            var result = con.selectByTime(startTime, endTime);
+            dataGridView1.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    myBindingSource.DataSource = result.ToList();
+                    dataGridView1.DataSource = myBindingSource.DataSource;//将BindingSource绑定到GridView
+                    dataGridView1.Columns["date"].HeaderText = "录入日期";
+                    dataGridView1.Columns["dutyName"].HeaderText = "班值";
+                    dataGridView1.Columns["autoTime"].HeaderText = "自动运行时间";
+                    dataGridView1.Columns["autoEnd"].HeaderText = "上次自动运行结束时间";
+                    dataGridView1.Columns["totalTime"].HeaderText = "运行总时间";
+                    dataGridView1.Columns["totalEnd"].HeaderText = "上次运行结束总时间";
+                    dataGridView1.Columns["percent"].HeaderText = "%";
+                }
+                catch (Exception ex)
+                {
+                    throw ex;
+                }
+            }));
+        }
     }
 }

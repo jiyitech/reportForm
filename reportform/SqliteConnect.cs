@@ -45,6 +45,11 @@ namespace reportform
            return db.Query<ReportInfo>("select * from ReportInfo where id = (select MAX(Id) from ReportInfo)");
         }
 
+        public IEnumerable<ReportInfo> selectByTime(string startTime, string endTime)
+        {
+            return db.Query<ReportInfo>($"select * from ReportInfo where date >='{startTime}' and date<='{endTime}' order by id desc");
+        }
+
         public long insert(ReportInfo report)
         {
             OrmLiteConfig.DialectProvider = SqliteOrmLiteDialectProvider.Instance;//OrmLiteConfig.DialectProvider 静态属性，我们使用前必须赋予初始值

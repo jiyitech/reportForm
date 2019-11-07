@@ -14,7 +14,6 @@ namespace reportform
     {
         [Alias("id"), PrimaryKey, AutoIncrement, ReadOnly(true)]
         public long id { get; set; }
-        [Default("getdate()"), ReadOnly(true)]
         public DateTime? date { get; set; }
         public string dutyName { get; set; }
         public double? autoTime { get; set; }
