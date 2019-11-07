@@ -1,0 +1,14 @@
+{
+    "inputdata": {
+        "autoName": "SAMPLE.AI17.F_CV",
+        "totalName": "SAMPLE.AI21.F_CV",
+        "address": "D:\\lzx\\hehe.db",
+        "removeComments": false,
+        "sourceMap": true,
+        "target": "es5"
+    },
+  "exclude": [
+    "node_modules",
+    "wwwroot"
+  ]
+}

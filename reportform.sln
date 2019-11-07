@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29424.173
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "reportform", "reportform\reportform.csproj", "{DE3E867A-9DED-4F38-8EC2-C3D4EDC2F796}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DE3E867A-9DED-4F38-8EC2-C3D4EDC2F796}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DE3E867A-9DED-4F38-8EC2-C3D4EDC2F796}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DE3E867A-9DED-4F38-8EC2-C3D4EDC2F796}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DE3E867A-9DED-4F38-8EC2-C3D4EDC2F796}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1A435A06-4FCD-4C12-B882-08E1C53D2CF6}
+	EndGlobalSection
+EndGlobal
