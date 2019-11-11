@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -6,6 +7,7 @@ using System.Data.SQLite;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -17,15 +19,10 @@ using TitaniumAS.Opc.Client.Da;
 
 namespace reportform
 {
-    public delegate void MyDelegateHandler();
     public partial class Form1 : Form
     {
-        SQLiteDataAdapter mAdapter;
-        DataTable mTable;
         public static Form1 frm;
         BindingSource myBindingSource = new BindingSource();//创建BindingSource
-        string autoname;
-        string totalname;
         string address;
         SqliteConnect con;
         public Form1()
@@ -34,7 +31,7 @@ namespace reportform
             frm = this;
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private void button1_Click(object sender, EventArgs e)//生成Excel
         {
             SaveFileDialog savefile = new SaveFileDialog();
             //如果文件名未写后缀名则自动添加     *.*不会自动添加后缀名
@@ -43,48 +40,65 @@ namespace reportform
             savefile.FileName = "斗轮机全自动投用率报表.xlsx";
             if (DialogResult.OK == savefile.ShowDialog())
             {
-                Excel.WriteSheet(savefile.FileName, myBindingSource.DataSource as DataTable);
+                IEnumerable<ReportInfo>  a= dataGridView1.DataSource as IEnumerable<ReportInfo>;
+                DataTable dt = AsDataTable<ReportInfo>(a);
+                dt.Columns.Remove("id");//TaskID为列名称
+                dt.Columns[0].ColumnName = "斗轮机编号";
+                dt.Columns[1].ColumnName = "录入日期";
+                dt.Columns[2].ColumnName = "班值";
+                dt.Columns[3].ColumnName = "自动运行时间";
+                dt.Columns[4].ColumnName = "上次自动运行结束时间";
+                dt.Columns[5].ColumnName = "运行总时间";
+                dt.Columns[6].ColumnName = "上次运行结束总时间";
+                dt.Columns[7].ColumnName = "本班投用率";
+                Excel.WriteSheet(savefile.FileName, dt);
             }
         }
 
-        public void showTable(string address)
+        private DataTable AsDataTable<T>(IEnumerable<T> data)
         {
-            mAdapter = new SQLiteDataAdapter("select * from ReportInfo", new SQLiteConnection($"Data Source={address};version=3"));
-            mTable = new DataTable(); // Don't forget initialize!
-            mAdapter.Fill(mTable);
-            // 绑定数据到DataGridView
-            dataGridView1.BeginInvoke(new Action(() =>
+            PropertyDescriptorCollection properties = TypeDescriptor.GetProperties(typeof(T));
+            var table = new DataTable();
+            foreach (PropertyDescriptor prop in properties)
+                table.Columns.Add(prop.Name, Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType);
+            foreach (T item in data)
             {
-                try
-                {
-                    myBindingSource.DataSource = mTable;
-                    dataGridView1.DataSource = myBindingSource.DataSource;//将BindingSource绑定到GridView
-                    dataGridView1.Columns["date"].HeaderText = "录入日期";
-                    dataGridView1.Columns["dutyName"].HeaderText = "班值";
-                    dataGridView1.Columns["autoTime"].HeaderText = "自动运行时间";
-                    dataGridView1.Columns["autoEnd"].HeaderText = "上次自动运行结束时间";
-                    dataGridView1.Columns["totalTime"].HeaderText = "运行总时间";
-                    dataGridView1.Columns["totalEnd"].HeaderText = "上次运行结束总时间";
-                    dataGridView1.Columns["percent"].HeaderText = "%";
-                    DataGridViewColumn col = dataGridView1.Columns[0];
-                    // 按降序(即始终每次新添加的数据排最前)
-                    ListSortDirection direction = ListSortDirection.Descending;
-                    dataGridView1.Sort(col, direction); // 执行指定排序规则
-                }
-                catch (Exception e)
-                {
-                    throw e;
-                }
-            }));
+                DataRow row = table.NewRow();
+                foreach (PropertyDescriptor prop in properties)
+                    row[prop.Name] = prop.GetValue(item) ?? DBNull.Value;
+                table.Rows.Add(row);
+            }
+            return table;
+        }
+
+        public void showTable()
+        {
+            selectByNameAndTime();
         }
 
         public void test()
         {
-            selectFromIFIX(autoname, totalname);
-            showTable(address);
+            string autoname;
+            string totalname;
+            string bucketWheel;
+            string jsonfile = Application.StartupPath + "\\appsetting.json";
+            using (System.IO.StreamReader file = System.IO.File.OpenText(jsonfile))
+            {
+                using (JsonTextReader reader = new JsonTextReader(file))
+                {
+                    JObject o = (JObject)JToken.ReadFrom(reader);
+                    foreach (var item in o["inputdata"]["tag"]) {
+                        autoname = item["autoName"].ToString();
+                        totalname = item["totalName"].ToString();
+                        bucketWheel = item["bucketWheelName"].ToString();
+                        selectFromIFIX(autoname, totalname, bucketWheel);
+                    }
+                }
+            }
+            showTable();
         }
 
-        public void selectFromIFIX(string autoName, string totalName)
+        public void selectFromIFIX(string autoName, string totalName,string bucketWheel)
         {
             Uri url = UrlBuilder.Build("Intellution.OPCiFIX.1");
             using (var server = new OpcDaServer(url))
@@ -116,15 +130,15 @@ namespace reportform
                 OpcDaItemValue[] values = group.Read(group.Items, OpcDaDataSource.Device);
                 string autoTime = JsonConvert.SerializeObject(values[0].Value);
                 string totalTime = JsonConvert.SerializeObject(values[1].Value);
-                insertTable(autoTime, totalTime);//插入数据库
+                insertTable(autoTime, totalTime, bucketWheel);//插入数据库
             }
         }
 
-        public void insertTable(string autoTime, string totalTime)
+        public void insertTable(string autoTime, string totalTime,string bucketWheel)
         {
             ReportInfo report = new ReportInfo();
 
-            IEnumerable<ReportInfo> resNew = con.selectNew();
+            IEnumerable<ReportInfo> resNew = con.selectNew(bucketWheel);
             double? previousAuto;
             double? previousTotal;
             if (resNew.Count() == 0)
@@ -157,6 +171,7 @@ namespace reportform
             report.totalEnd = totalEnd;
             report.totalTime = totalEnd - previousTotal;
             report.percent = (autoEnd - previousAuto) / (totalEnd - previousTotal) * 100;
+            report.bucketWheel = bucketWheel;
             report.date = DateTime.Now;
             con.insert(report);
         }
@@ -166,17 +181,25 @@ namespace reportform
             CheckForIllegalCrossThreadCalls = false;
             con = new SqliteConnect();
             string jsonfile = Application.StartupPath + "\\appsetting.json";
+            ArrayList mylist = new ArrayList();
+            string name;
             using (System.IO.StreamReader file = System.IO.File.OpenText(jsonfile))
             {
                 using (JsonTextReader reader = new JsonTextReader(file))
                 {
                     JObject o = (JObject)JToken.ReadFrom(reader);
-                    autoname = o["inputdata"]["autoName"].ToString();
-                    totalname = o["inputdata"]["totalName"].ToString();
                     address = o["inputdata"]["address"].ToString();
+                    foreach (var item in o["inputdata"]["tag"])//将数据显示到combox窗口
+                    {
+                        name = item["bucketWheelName"].ToString();
+                        mylist.Add(new DictionaryEntry(name, $"{name}"));
+                    }
                 }
             }
-            showTable(address);
+            comboBox1.DataSource = mylist;
+            comboBox1.DisplayMember = "Value";
+            comboBox1.ValueMember = "Key";
+            showTable();
             TaskInit.Init();
         }
 
@@ -218,28 +241,50 @@ namespace reportform
 
         private void button2_Click(object sender, EventArgs e)
         {
+            selectByNameAndTime();
+        }
+
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            selectByNameAndTime();
+        }
+
+        private void Chinese()//改字段名为中文
+        {
+            dataGridView1.Columns["bucketWheel"].HeaderText = "斗轮机编号";
+            dataGridView1.Columns["date"].HeaderText = "录入日期";
+            dataGridView1.Columns["dutyName"].HeaderText = "班值";
+            dataGridView1.Columns["autoTime"].HeaderText = "自动运行时间";
+            dataGridView1.Columns["autoEnd"].HeaderText = "上次自动运行结束时间";
+            dataGridView1.Columns["totalTime"].HeaderText = "运行总时间";
+            dataGridView1.Columns["totalEnd"].HeaderText = "上次运行结束总时间";
+            dataGridView1.Columns["percent"].HeaderText = "本班投用率";
+        }
+
+        private void selectByNameAndTime()//根据斗轮机编号和时间找数据
+        {
             var startTime = dateTimePicker1.Value.ToString("yyyy-MM-dd HH:mm:ss");
             var endTime = dateTimePicker2.Value.ToString("yyyy-MM-dd HH:mm:ss");
-            var result = con.selectByTime(startTime, endTime);
+            var selectValue = ((DictionaryEntry)comboBox1.SelectedItem).Value.ToString();
+            var result = con.selectByTimeAndName(startTime, endTime, selectValue);
             dataGridView1.BeginInvoke(new Action(() =>
             {
                 try
                 {
-                    myBindingSource.DataSource = result.ToList();
+                    myBindingSource.DataSource = result;
                     dataGridView1.DataSource = myBindingSource.DataSource;//将BindingSource绑定到GridView
-                    dataGridView1.Columns["date"].HeaderText = "录入日期";
-                    dataGridView1.Columns["dutyName"].HeaderText = "班值";
-                    dataGridView1.Columns["autoTime"].HeaderText = "自动运行时间";
-                    dataGridView1.Columns["autoEnd"].HeaderText = "上次自动运行结束时间";
-                    dataGridView1.Columns["totalTime"].HeaderText = "运行总时间";
-                    dataGridView1.Columns["totalEnd"].HeaderText = "上次运行结束总时间";
-                    dataGridView1.Columns["percent"].HeaderText = "%";
+                    Chinese();
                 }
                 catch (Exception ex)
                 {
                     throw ex;
                 }
             }));
+        }
+
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            toolStripStatusLabel1.Text = DateTime.Now.ToString();
         }
     }
 }

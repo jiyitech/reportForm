@@ -14,9 +14,6 @@ namespace reportform
     public class TestJob : IJob
     {
 
-
-        public MyDelegateHandler myDelegate = null;
-
         /// <summary>
         /// 作业调度定时执行的方法
         /// </summary>

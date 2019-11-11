@@ -202,7 +202,7 @@ namespace reportform
             }
             else if (value.GetType() == typeof(DateTime))
             {
-              ws.GetRow(rownum).Cells[i].SetCellValue((DateTime)value);
+              ws.GetRow(rownum).Cells[i].SetCellValue(((DateTime)value).ToString("yyyy-MM-dd"));
             }
             else
             {

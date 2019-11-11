@@ -33,7 +33,7 @@ namespace reportform
                 .WithIdentity("job1", "triggerGroup")
                 .StartNow()
                 .WithSimpleSchedule(x => x
-                .WithIntervalInSeconds(10)
+                .WithIntervalInSeconds(2)
                 .RepeatForever())
                 .Build();
 
@@ -41,12 +41,13 @@ namespace reportform
             ITrigger cronTrigger = TriggerBuilder.Create()
                 .WithIdentity("job2", "triggerGroup")
                 .StartNow()
-                .WithCronSchedule("0 0 0,8,16 * * ?")
-                .ForJob(testJob)
+                .WithCronSchedule("0 0 0,8,16 * * ? *",x => x
+        .WithMisfireHandlingInstructionIgnoreMisfires())
+                //.ForJob(testJob)
                 .Build();
             // 任务加入调度器
             await scheduler.ScheduleJob(testJob, jobTrigger);
-            await scheduler.ScheduleJob(cronTrigger);
+            await scheduler.ScheduleJob(testJob,cronTrigger);
         }
     }
 }

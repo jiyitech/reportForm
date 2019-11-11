@@ -40,14 +40,14 @@ namespace reportform
             }
         }
 
-        public IEnumerable<ReportInfo> selectNew()
+        public IEnumerable<ReportInfo> selectNew(string bucketWheelName)
         {
-           return db.Query<ReportInfo>("select * from ReportInfo where id = (select MAX(Id) from ReportInfo)");
+           return db.Query<ReportInfo>($"select * from ReportInfo where id = (select MAX(Id) from ReportInfo where bucketWheel = '{bucketWheelName}')");
         }
 
-        public IEnumerable<ReportInfo> selectByTime(string startTime, string endTime)
+        public IEnumerable<ReportInfo> selectByTimeAndName(string startTime, string endTime, string bucketWheelName)
         {
-            return db.Query<ReportInfo>($"select * from ReportInfo where date >='{startTime}' and date<='{endTime}' order by id desc");
+            return db.Query<ReportInfo>($"select * from ReportInfo where date >='{startTime}' and date<='{endTime}' and bucketWheel='{bucketWheelName}'order by date desc");
         }
 
         public long insert(ReportInfo report)
