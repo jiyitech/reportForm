@@ -50,6 +50,11 @@ namespace reportform
             return db.Query<ReportInfo>($"select * from ReportInfo where date >='{startTime}' and date<='{endTime}' and bucketWheel='{bucketWheelName}'order by date desc");
         }
 
+        public IEnumerable<ReportInfo> selectByTime(string startTime, string endTime)
+        {
+            return db.Query<ReportInfo>($"select * from ReportInfo where date >='{startTime}' and date<='{endTime}' order by date desc");
+        }
+
         public long insert(ReportInfo report)
         {
             OrmLiteConfig.DialectProvider = SqliteOrmLiteDialectProvider.Instance;//OrmLiteConfig.DialectProvider 静态属性，我们使用前必须赋予初始值

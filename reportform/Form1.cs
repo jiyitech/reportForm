@@ -24,11 +24,35 @@ namespace reportform
         public static Form1 frm;
         BindingSource myBindingSource = new BindingSource();//创建BindingSource
         string address;
+        string monthAddress;
         SqliteConnect con;
         public Form1()
         {
             InitializeComponent();
             frm = this;
+        }
+
+        public void autoGenerateExcel()
+        {
+            SaveFileDialog savefile = new SaveFileDialog();
+            //如果文件名未写后缀名则自动添加     *.*不会自动添加后缀名
+            savefile.AddExtension = true;
+            savefile.Filter = "|*.*";
+            savefile.FileName = monthAddress + DateTime.Now.ToString("yyyy-MM-dd") + ".xlsx";
+            string DateStart = DateTime.Parse(DateTime.Now.ToString("yyyy-MM-01")).AddMonths(-1).ToString("yyyy-MM-dd HH:mm:ss");//上个月1号
+            string DateEnd = DateTime.Parse(DateTime.Now.ToString("yyyy-MM-01 23:59:59")).AddDays(-1).ToString("yyyy-MM-dd HH:mm:ss");//上个月最后一天
+            IEnumerable<ReportInfo> MonthData = con.selectByTime(DateStart, DateEnd);
+            DataTable dt = AsDataTable<ReportInfo>(MonthData);
+            dt.Columns.Remove("id");//TaskID为列名称
+            dt.Columns[0].ColumnName = "斗轮机编号";
+            dt.Columns[1].ColumnName = "录入日期";
+            dt.Columns[2].ColumnName = "班值";
+            dt.Columns[3].ColumnName = "自动运行时间";
+            dt.Columns[4].ColumnName = "上次自动运行结束时间";
+            dt.Columns[5].ColumnName = "运行总时间";
+            dt.Columns[6].ColumnName = "上次运行结束总时间";
+            dt.Columns[7].ColumnName = "本班投用率";
+            Excel.WriteSheet(savefile.FileName, dt);
         }
 
         private void button1_Click(object sender, EventArgs e)//生成Excel
@@ -40,8 +64,8 @@ namespace reportform
             savefile.FileName = "斗轮机全自动投用率报表.xlsx";
             if (DialogResult.OK == savefile.ShowDialog())
             {
-                IEnumerable<ReportInfo>  a= dataGridView1.DataSource as IEnumerable<ReportInfo>;
-                DataTable dt = AsDataTable<ReportInfo>(a);
+                IEnumerable<ReportInfo> outputData = dataGridView1.DataSource as IEnumerable<ReportInfo>;
+                DataTable dt = AsDataTable<ReportInfo>(outputData);
                 dt.Columns.Remove("id");//TaskID为列名称
                 dt.Columns[0].ColumnName = "斗轮机编号";
                 dt.Columns[1].ColumnName = "录入日期";
@@ -76,7 +100,7 @@ namespace reportform
             selectByNameAndTime();
         }
 
-        public void test()
+        public void classShow()
         {
             string autoname;
             string totalname;
@@ -87,7 +111,8 @@ namespace reportform
                 using (JsonTextReader reader = new JsonTextReader(file))
                 {
                     JObject o = (JObject)JToken.ReadFrom(reader);
-                    foreach (var item in o["inputdata"]["tag"]) {
+                    foreach (var item in o["inputdata"]["tag"])
+                    {
                         autoname = item["autoName"].ToString();
                         totalname = item["totalName"].ToString();
                         bucketWheel = item["bucketWheelName"].ToString();
@@ -98,7 +123,17 @@ namespace reportform
             showTable();
         }
 
-        public void selectFromIFIX(string autoName, string totalName,string bucketWheel)
+       public void setMonthTime(string monthtime)
+        {
+            toolStripStatusLabel2.Text = "下次月报表执行时间：" + monthtime;
+        }
+
+        public void setClassTime(string classtime) {
+            toolStripStatusLabel1.Text = "下次班报表执行时间：" + classtime;
+        }
+
+
+        public void selectFromIFIX(string autoName, string totalName, string bucketWheel)
         {
             Uri url = UrlBuilder.Build("Intellution.OPCiFIX.1");
             using (var server = new OpcDaServer(url))
@@ -134,7 +169,7 @@ namespace reportform
             }
         }
 
-        public void insertTable(string autoTime, string totalTime,string bucketWheel)
+        public void insertTable(string autoTime, string totalTime, string bucketWheel)
         {
             ReportInfo report = new ReportInfo();
 
@@ -160,7 +195,7 @@ namespace reportform
             {
                 report.dutyName = "中";
             }
-            else if (currentTime > 16)
+            else if (currentTime > 16 && currentTime == 0)
             {
                 report.dutyName = "夜";
             }
@@ -177,7 +212,7 @@ namespace reportform
         }
 
         private void Form1_Load(object sender, EventArgs e)
-        {
+        {   
             CheckForIllegalCrossThreadCalls = false;
             con = new SqliteConnect();
             string jsonfile = Application.StartupPath + "\\appsetting.json";
@@ -189,6 +224,7 @@ namespace reportform
                 {
                     JObject o = (JObject)JToken.ReadFrom(reader);
                     address = o["inputdata"]["address"].ToString();
+                    monthAddress = o["inputdata"]["monthAddress"].ToString(); 
                     foreach (var item in o["inputdata"]["tag"])//将数据显示到combox窗口
                     {
                         name = item["bucketWheelName"].ToString();
@@ -209,7 +245,7 @@ namespace reportform
             //取消关闭窗口
             e.Cancel = true;
             //最小化主窗口
-            this.WindowState = FormWindowState.Minimized;
+            Hide();
             //不在系统任务栏显示主窗口图标
             this.ShowInTaskbar = false;
             //提示气泡
@@ -221,13 +257,10 @@ namespace reportform
         {
             if (e.Button == MouseButtons.Left)
             {
-                if (this.WindowState == FormWindowState.Minimized)
-                {
-                    //还原窗体
-                    this.WindowState = FormWindowState.Normal;
-                    //系统任务栏显示图标
-                    this.ShowInTaskbar = true;
-                }
+                Show();
+                //系统任务栏显示图标
+                this.ShowInTaskbar = true;
+
                 //激活窗体并获取焦点
                 this.Activate();
             }
@@ -280,11 +313,6 @@ namespace reportform
                     throw ex;
                 }
             }));
-        }
-
-        private void timer1_Tick(object sender, EventArgs e)
-        {
-            toolStripStatusLabel1.Text = DateTime.Now.ToString();
         }
     }
 }

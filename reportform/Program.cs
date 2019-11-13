@@ -97,7 +97,7 @@ namespace reportform
                         {
                             if (processes[i].MainWindowHandle.ToInt32() == 0)
                             {
-                                formhwnd = FindWindow(null, "Form1");
+                                formhwnd = FindWindow(null, "斗轮机全自动投用率报表");
                                 ShowWindow(formhwnd, SW_RESTORE);
                                 SwitchToThisWindow(formhwnd, true);
                             }

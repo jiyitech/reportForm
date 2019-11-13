@@ -1,18 +1,18 @@
 {
     "inputdata": {
-        "tag": 
-            [
-                {
-                    "bucketWheelName": "#1",
-                    "autoName": "SAMPLE.AI17.F_CV",
-                    "totalName": "SAMPLE.AI21.F_CV"
-                },
-                {
-                    "bucketWheelName": "#2",
-                    "autoName": "SAMPLE.AI12.F_CV",
-                    "totalName": "SAMPLE.AI16.F_CV"
-                }
-            ],
-        "address":"D:\\lzx\\hehe.db"
+        "tag": [
+            {
+                "bucketWheelName": "#1",
+                "autoName": "SAMPLE.AI17.F_CV",
+                "totalName": "SAMPLE.AI21.F_CV"
+            },
+            {
+                "bucketWheelName": "#2",
+                "autoName": "SAMPLE.AI12.F_CV",
+                "totalName": "SAMPLE.AI16.F_CV"
+            }
+        ],
+        "address": "D:\\lzx\\GenerateDB.db",
+        "monthAddress": "D:\\lzx\\"
     }
 }

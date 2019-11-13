@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace reportform
 {
-    public class TestJob : IJob
+    public class ClassJob : IJob
     {
 
         /// <summary>
@@ -23,7 +23,10 @@ namespace reportform
         {
             try
             {
-                Form1.frm.test();
+                string time = context.NextFireTimeUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+                
+                Form1.frm.setClassTime(time);
+                Form1.frm.classShow();
             }
             catch (Exception ex)
             {
