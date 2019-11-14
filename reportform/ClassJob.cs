@@ -24,9 +24,17 @@ namespace reportform
             try
             {
                 string time = context.NextFireTimeUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
-                
-                Form1.frm.setClassTime(time);
-                Form1.frm.classShow();
+                int hour = context.FireTimeUtc.ToLocalTime().Hour;
+                if (hour == 0)
+                {
+                    Form1.frm.setDateTime();
+                    Form1.frm.setClassTime(time);
+                }
+                else {
+                    Form1.frm.setClassTime(time);
+                    Form1.frm.classShow();
+                }
+               
             }
             catch (Exception ex)
             {

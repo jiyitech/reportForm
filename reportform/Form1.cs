@@ -132,6 +132,12 @@ namespace reportform
             toolStripStatusLabel1.Text = "下次班报表执行时间：" + classtime;
         }
 
+        public void setDateTime() { 
+            dateTimePicker1.Value = new System.DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day);
+            dateTimePicker2.Value = new System.DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day);
+            classShow();
+        }
+
 
         public void selectFromIFIX(string autoName, string totalName, string bucketWheel)
         {
@@ -195,7 +201,7 @@ namespace reportform
             {
                 report.dutyName = "中";
             }
-            else if (currentTime > 16 && currentTime == 0)
+            else if (currentTime > 16 || currentTime == 0)
             {
                 report.dutyName = "夜";
             }
@@ -212,7 +218,7 @@ namespace reportform
         }
 
         private void Form1_Load(object sender, EventArgs e)
-        {   
+        {
             CheckForIllegalCrossThreadCalls = false;
             con = new SqliteConnect();
             string jsonfile = Application.StartupPath + "\\appsetting.json";
@@ -297,7 +303,7 @@ namespace reportform
         private void selectByNameAndTime()//根据斗轮机编号和时间找数据
         {
             var startTime = dateTimePicker1.Value.ToString("yyyy-MM-dd HH:mm:ss");
-            var endTime = dateTimePicker2.Value.ToString("yyyy-MM-dd HH:mm:ss");
+            var endTime = dateTimePicker2.Value.ToString("yyyy-MM-dd 23:59:59");
             var selectValue = ((DictionaryEntry)comboBox1.SelectedItem).Value.ToString();
             var result = con.selectByTimeAndName(startTime, endTime, selectValue);
             dataGridView1.BeginInvoke(new Action(() =>

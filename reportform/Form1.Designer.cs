@@ -112,7 +112,7 @@ namespace reportform
             this.dateTimePicker1.Name = "dateTimePicker1";
             this.dateTimePicker1.Size = new System.Drawing.Size(200, 21);
             this.dateTimePicker1.TabIndex = 4;
-            this.dateTimePicker1.Value = new System.DateTime(2019, 11, 7, 0, 0, 0, 0);
+            this.dateTimePicker1.Value = new System.DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day);
             // 
             // dateTimePicker2
             // 
@@ -123,7 +123,7 @@ namespace reportform
             this.dateTimePicker2.Name = "dateTimePicker2";
             this.dateTimePicker2.Size = new System.Drawing.Size(200, 21);
             this.dateTimePicker2.TabIndex = 5;
-            this.dateTimePicker2.Value = new System.DateTime(2019, 11, 12, 0, 0, 0, 0);
+            this.dateTimePicker2.Value = new System.DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day);
             // 
             // button2
             // 
