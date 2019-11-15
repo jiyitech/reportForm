@@ -195,15 +195,15 @@ namespace reportform
             int currentTime = DateTime.Now.Hour;
             if (currentTime > 0 && currentTime <= 8)
             {
-                report.dutyName = "日";
+                report.dutyName = "夜";
             }
             else if (currentTime > 8 && currentTime <= 16)
             {
-                report.dutyName = "中";
+                report.dutyName = "日";
             }
             else if (currentTime > 16 || currentTime == 0)
             {
-                report.dutyName = "夜";
+                report.dutyName = "中";
             }
             double.TryParse(autoTime, out double autoEnd);
             double.TryParse(totalTime, out double totalEnd);
